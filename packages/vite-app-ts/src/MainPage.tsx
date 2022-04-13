@@ -1,15 +1,21 @@
-import React, { FC, useEffect, useState } from 'react';
+import React, { FC, useContext, useEffect, useState } from 'react';
 import { BrowserRouter, Route, Switch } from 'react-router-dom';
 
 import '~~/styles/main-page.css';
 
 import { GenericContract } from 'eth-components/ant/generic-contract';
-import { useContractReader, useBalance, useEthersAdaptorFromProviderOrSigners, useEventListener } from 'eth-hooks';
+import {
+  useContractReader,
+  useBalance,
+  useEthersAdaptorFromProviderOrSigners,
+  useEventListener,
+  useGasPrice,
+} from 'eth-hooks';
 import { useEthersContext } from 'eth-hooks/context';
 import { useDexEthPrice } from 'eth-hooks/dapps';
 import { asEthersAdaptor } from 'eth-hooks/functions';
 
-import { MainPageMenu, MainPageContracts, MainPageFooter, MainPageHeader } from './components/main';
+import { MainPageMenu, MainPageFooter, MainPageHeader } from './components/main';
 import { useScaffoldHooksExamples as useScaffoldHooksExamples } from './components/main/hooks/useScaffoldHooksExamples';
 
 import { useBurnerFallback } from '~~/components/main/hooks/useBurnerFallback';
@@ -18,6 +24,19 @@ import { Hints, ExampleUI } from '~~/components/pages';
 import { BURNER_FALLBACK_ENABLED, MAINNET_PROVIDER } from '~~/config/appConfig';
 import { useAppContracts, useConnectAppContracts, useLoadAppContracts } from '~~/config/contractContext';
 import { NETWORKS } from '~~/models/constants/networks';
+
+import { Button, Input, Spin } from 'antd';
+import { transactor } from 'eth-components/functions';
+import { EthComponentsSettingsContext } from 'eth-components/models';
+
+// const yourTokenAddress = '0xd74E9aCdc4f4DAd774f66C47Be87DDBE023c968d';
+// const targetL1 = NETWORKS.kovan;
+// const l1Provider = new ethers.providers.JsonRpcProvider(targetL1.rpcUrl);
+enum L2DeployState {
+  NOT_STARTED,
+  DEPLOYING,
+  DEPLOYED,
+}
 
 /**
  * ⛳️⛳️⛳️⛳️⛳️⛳️⛳️⛳️⛳️⛳️⛳️⛳️⛳️⛳️
@@ -43,6 +62,10 @@ export const Main: FC = () => {
 
   // 🦊 Get your web3 ethers context from current providers
   const ethersContext = useEthersContext();
+
+  const ethComponentsSettings = useContext(EthComponentsSettingsContext);
+  const [gasPrice] = useGasPrice(ethersContext.chainId, 'fast');
+  const tx = transactor(ethComponentsSettings, ethersContext?.signer, gasPrice);
 
   // if no user is found use a burner wallet on localhost as fallback if enabled
   useBurnerFallback(scaffoldAppProviders, BURNER_FALLBACK_ENABLED);
@@ -72,7 +95,9 @@ export const Main: FC = () => {
 
   // init contracts
   const yourContract = useAppContracts('YourContract', ethersContext.chainId);
+  const yourTokenContract = useAppContracts('YourToken', NETWORKS.kovan.chainId);
   const mainnetDai = useAppContracts('DAI', NETWORKS.mainnet.chainId);
+  const tokenFactory = useAppContracts('L2TokenFactory', NETWORKS.kovanOptimism.chainId);
 
   // keep track of a variable from the contract in the local React state:
   const [purpose, update] = useContractReader(
@@ -99,6 +124,44 @@ export const Main: FC = () => {
     setRoute(window.location.pathname);
   }, [setRoute]);
 
+  const [l1TokenAddress, setL1TokenAddress] = useState<string>('');
+  const [l2TokenAddress, setL2TokenAddress] = useState<string>('');
+
+  const [deployState, setDeployState] = useState<L2DeployState>(L2DeployState.NOT_STARTED);
+  let l2DeployView = <></>;
+  switch (deployState) {
+    case L2DeployState.NOT_STARTED:
+      l2DeployView = <></>;
+      break;
+    case L2DeployState.DEPLOYING:
+      l2DeployView = <Spin />;
+      break;
+    case L2DeployState.DEPLOYED:
+      l2DeployView = <Input value={l2TokenAddress} />;
+      break;
+  }
+
+  const deployToL2 = async (): Promise<void> => {
+    setDeployState(L2DeployState.DEPLOYING);
+    const result = await tx?.(tokenFactory?.createStandardL2Token(l1TokenAddress, 'GOLD', 'GLD'));
+    console.log(result);
+    if (!result || result.code === 4001) {
+      setDeployState(L2DeployState.NOT_STARTED);
+      return;
+    }
+
+    const receipt = await result.wait();
+    console.log(receipt);
+
+    const args = receipt.events.find(({ event }) => event === 'StandardL2TokenCreated').args;
+
+    // Get the L2 token address from the emmited event and log
+    const address: string = args._l2Token;
+    setL2TokenAddress(address);
+    setDeployState(L2DeployState.DEPLOYED);
+    console.log('L2StandardERC20 deployed to:', l2TokenAddress);
+  };
+
   return (
     <div className="App">
       <MainPageHeader scaffoldAppProviders={scaffoldAppProviders} price={ethPrice} />
@@ -108,7 +171,27 @@ export const Main: FC = () => {
         <MainPageMenu route={route} setRoute={setRoute} />
         <Switch>
           <Route exact path="/">
-            <MainPageContracts scaffoldAppProviders={scaffoldAppProviders} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '15px',
+                  width: '500px',
+                }}>
+                <Input
+                  placeholder="L1 Token Address"
+                  value={l1TokenAddress}
+                  onChange={(e): void => setL1TokenAddress(e.target.value)}
+                />
+                <Button type="primary" onClick={deployToL2}>
+                  Deploy to L2
+                </Button>
+                {l2DeployView}
+              </div>
+            </div>
+            {/* <MainPageContracts scaffoldAppProviders={scaffoldAppProviders} /> */}
           </Route>
           {/* you can add routes here like the below examlples */}
           <Route path="/hints">

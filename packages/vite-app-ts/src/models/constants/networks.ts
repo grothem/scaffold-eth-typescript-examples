@@ -6,6 +6,7 @@ export type TNetworkNames =
   | 'localhost'
   | 'mainnet'
   | 'kovan'
+  | 'kovanOptimism'
   | 'rinkeby'
   | 'ropsten'
   | 'goerli'
@@ -40,6 +41,14 @@ export const NETWORKS: Record<TNetworkNames, TNetworkInfo> = {
     rpcUrl: `https://kovan.infura.io/v3/${INFURA_ID}`,
     blockExplorer: 'https://kovan.etherscan.io/',
     faucet: 'https://gitter.im/kovan-testnet/faucet', // https://faucet.kovan.network/
+  },
+  kovanOptimism: {
+    name: 'kovanOptimism',
+    color: '#7003DD',
+    chainId: 69,
+    rpcUrl: `https://optimism-kovan.infura.io/v3/${INFURA_ID}`,
+    blockExplorer: 'https://kovan-explorer.optimism.io/',
+    faucet: 'https://faucet.paradigm.xyz/',
   },
   rinkeby: {
     name: 'rinkeby',

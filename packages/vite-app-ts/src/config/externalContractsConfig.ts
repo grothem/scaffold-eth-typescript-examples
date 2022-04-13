@@ -17,4 +17,7 @@ export const externalContractsAddressMap: TExternalContractsAddressMap = {
     DAI: '0x6b175474e89094c44da98b954eedeac495271d0f',
     UNI: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984',
   },
+  [NetworkID.OPTIMISTIC_KOVAN]: {
+    L2TokenFactory: '0x4200000000000000000000000000000000000012',
+  },
 };

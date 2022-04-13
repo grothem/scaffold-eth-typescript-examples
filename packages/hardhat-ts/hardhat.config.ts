@@ -121,6 +121,12 @@ const config: HardhatUserConfig = {
         mnemonic: getMnemonic(),
       },
     },
+    kovanOptimism: {
+      url: 'https://kovan.optimism.io',
+      accounts: {
+        mnemonic: getMnemonic(),
+      },
+    },
   },
   solidity: {
     compilers: [

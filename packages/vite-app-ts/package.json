@@ -24,6 +24,7 @@
     "@ant-design/icons": "^4.7.0",
     "@babel/runtime": "^7.16.7",
     "@emotion/react": "^11.7.1",
+    "@eth-optimism/sdk": "^1.1.0",
     "@ethersproject/abi": "^5.5.0",
     "@ethersproject/abstract-provider": "^5.5.1",
     "@ethersproject/address": "^5.5.0",
